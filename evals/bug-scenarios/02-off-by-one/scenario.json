@@ -1,0 +1,12 @@
+{
+  "id": "02-off-by-one",
+  "name": "Pagination off-by-one error",
+  "language": "javascript",
+  "fixture": "fixtures/off_by_one.js",
+  "prompt": "The paginate function returns wrong results. When I request page 1 with pageSize 3, I get [4,5,6] instead of [1,2,3]. What's wrong?",
+  "bug_type": "off_by_one",
+  "expected_root_cause": "Start index calculation uses page * pageSize instead of (page - 1) * pageSize for 1-based page numbering",
+  "expected_fix_keywords": ["page - 1", "page-1", "(page - 1)", "0-based", "1-based", "start index"],
+  "expected_scope": ["paginate"],
+  "has_secondary_bug": false
+}

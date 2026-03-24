@@ -1,0 +1,13 @@
+{
+  "id": "05-type-coercion",
+  "name": "String type coercion bug in shopping cart",
+  "language": "javascript",
+  "fixture": "fixtures/type_coercion.js",
+  "prompt": "My shopping cart receipt shows 'Widget: 19.9919.99' instead of 'Widget: 39.98'. The formatReceipt function seems to concatenate prices as strings. How do I fix this?",
+  "bug_type": "type_coercion",
+  "expected_root_cause": "Price values arrive as strings from form input. The + operator performs string concatenation instead of numeric addition",
+  "expected_fix_keywords": ["parseFloat", "parseInt", "Number(", "+price", "type", "coercion", "string", "number", "parse"],
+  "expected_scope": ["addItem", "formatReceipt", "ShoppingCart"],
+  "has_secondary_bug": true,
+  "secondary_bug_description": "quantity can also be a string, affecting other calculations"
+}

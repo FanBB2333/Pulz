@@ -1,0 +1,13 @@
+{
+  "id": "01-null-deref",
+  "name": "NullPointerException in UserService",
+  "language": "python",
+  "fixture": "fixtures/null_deref.py",
+  "prompt": "I'm getting 'TypeError: NoneType object is not subscriptable' at line 23 in null_deref.py when calling get_user_display_name(999). Help me debug this.",
+  "bug_type": "null_dereference",
+  "expected_root_cause": "find_by_id returns None for non-existent user IDs, but the caller accesses dict keys without checking for None",
+  "expected_fix_keywords": ["None", "null", "check", "Optional", "if user", "is None", "not found", "KeyError", "TypeError"],
+  "expected_scope": ["get_user_display_name", "get_user_email", "find_by_id"],
+  "has_secondary_bug": true,
+  "secondary_bug_description": "Same null-deref pattern exists in get_user_email"
+}

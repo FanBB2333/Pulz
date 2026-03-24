@@ -1,0 +1,18 @@
+# Prompts that SHOULD activate the Pulz skill
+# One prompt per line. Lines starting with # are comments.
+
+这个函数一直报 NullPointerException，帮我看看哪里出了问题
+I'm getting a segfault in this function, can you debug it?
+这个测试一直失败，能帮我诊断一下吗？
+There's a race condition in my connection pool, help me find the root cause
+帮我修复这个 bug，用户登录的时候会 crash
+My API endpoint returns 500 intermittently, need root cause analysis
+这段代码有内存泄漏，帮我排查一下
+The build passes but the app crashes at runtime with this stack trace
+为什么这个函数在边界条件下返回错误结果？
+Debug this: TypeError: Cannot read property 'name' of undefined
+/pulz 帮我看看这个报错
+Can you do a code diagnosis on this module? It's behaving strangely
+这个并发问题怎么排查？线程偶尔死锁
+Help me fix this off-by-one error in the pagination logic
+运行时报错 IndexOutOfBoundsException，分析一下原因

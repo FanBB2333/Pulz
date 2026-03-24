@@ -1,0 +1,12 @@
+{
+  "id": "03-resource-leak",
+  "name": "Connection pool exhaustion due to resource leak",
+  "language": "python",
+  "fixture": "fixtures/resource_leak.py",
+  "prompt": "My connection pool keeps throwing 'Pool exhausted' after a few batches of queries, even though max_size is 5 and I'm releasing connections. Can you diagnose why?",
+  "bug_type": "resource_leak",
+  "expected_root_cause": "release() removes the connection from _in_use but does not add it back to _pool, so connections are lost permanently",
+  "expected_fix_keywords": ["_pool", "append", "put back", "return to pool", "add back"],
+  "expected_scope": ["release", "ConnectionPool"],
+  "has_secondary_bug": false
+}

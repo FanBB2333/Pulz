@@ -1,0 +1,18 @@
+# Prompts that should NOT activate the Pulz skill
+# One prompt per line. Lines starting with # are comments.
+
+帮我写一个快速排序算法
+Create a new React component for the dashboard
+Explain how async/await works in JavaScript
+帮我把这个函数重构成更简洁的写法
+Write unit tests for the UserService class
+What's the difference between TCP and UDP?
+帮我写一个 Dockerfile
+Set up a CI/CD pipeline with GitHub Actions
+Summarize this pull request for me
+帮我生成 API 文档
+How do I configure ESLint for this project?
+Translate this Python code to Go
+帮我优化这个 SQL 查询的性能
+Create a new REST endpoint for user registration
+What design patterns would work well here?

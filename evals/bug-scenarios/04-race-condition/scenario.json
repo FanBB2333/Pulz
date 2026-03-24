@@ -1,0 +1,12 @@
+{
+  "id": "04-race-condition",
+  "name": "Counter race condition in multithreaded code",
+  "language": "python",
+  "fixture": "fixtures/race_condition.py",
+  "prompt": "My counter should reach 100 (4 threads x 25 increments) but it always shows a much smaller number. The increment function seems correct. What's going on?",
+  "bug_type": "race_condition",
+  "expected_root_cause": "increment() performs a non-atomic read-modify-write: it reads self.value, sleeps, then writes back, allowing concurrent threads to overwrite each other's increments",
+  "expected_fix_keywords": ["Lock", "lock", "threading.Lock", "atomic", "synchroniz", "mutex", "with self._lock", "acquire"],
+  "expected_scope": ["increment", "Counter"],
+  "has_secondary_bug": false
+}
