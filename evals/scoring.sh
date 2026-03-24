@@ -5,6 +5,21 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/test-helpers.sh"
 
+# Extract salient tokens from an expected root-cause description.
+extract_reference_terms() {
+    local text="$1"
+
+    printf '%s\n' "$text" |
+        tr '[:upper:]' '[:lower:]' |
+        sed -E 's/[^[:alnum:]_]+/ /g' |
+        tr ' ' '\n' |
+        awk '
+            length($0) >= 3 &&
+            $0 !~ /^(the|and|for|with|without|from|into|onto|that|this|those|these|then|than|when|while|after|before|does|doing|did|used|uses|using|through|their|there|where|which|because|cause|caused|causes|return|returns|read|reads|write|writes|allow|allows|allowing|caller|callers|but|are|not|non|user|users|id|ids|dict|key|keys|value|values|item|items|data|arrive|arrives|perform|performs)$/ &&
+            !seen[$0]++
+        '
+}
+
 # Dimension 1: Diagnostic Thoroughness (0-10)
 # Does the response systematically analyze the problem before jumping to a fix?
 score_thoroughness() {
@@ -12,20 +27,20 @@ score_thoroughness() {
     local score=0
 
     # Phase coverage (0-4): did the response cover all diagnostic angles?
-    echo "$output" | grep -qi "struct\|complex\|depend\|code.*smell\|static" && ((score++)) || true
-    echo "$output" | grep -qi "error.*message\|stack.*trace\|log\|runtime\|exception" && ((score++)) || true
-    echo "$output" | grep -qi "context\|environment\|when\|condition\|reproduce\|recent.*change" && ((score++)) || true
-    echo "$output" | grep -qi "test\|trace.*flow\|variable\|state\|confirm\|verif" && ((score++)) || true
+    echo "$output" | grep -qi "line [0-9]\|function\|method\|class\|code.*path\|control.*flow\|branch\|index\|null\|undefined\|type\|resource\|lock" && ((score++)) || true
+    echo "$output" | grep -qi "error\|exception\|stack.*trace\|runtime\|crash\|wrong result\|expected.*actual\|actual.*expected\|intermittent" && ((score++)) || true
+    echo "$output" | grep -qi "context\|environment\|when\|condition\|reproduce\|recent.*change\|input\|thread\|batch" && ((score++)) || true
+    echo "$output" | grep -qi "test\|assert\|verify\|fail.*before\|pass.*after\|trace.*flow\|variable\|state\|confirm" && ((score++)) || true
 
     # Evidence gathering (0-3): did it cite specific evidence?
-    echo "$output" | grep -qi "line [0-9]\|function.*\w\|method.*\w\|class.*\w" && ((score++)) || true
+    echo "$output" | grep -qi "line [0-9]\|function.*[[:alnum:]_]\|method.*[[:alnum:]_]\|class.*[[:alnum:]_]\|file\|module" && ((score++)) || true
     echo "$output" | grep -qi "because\|due to\|caused by\|the reason\|this happens" && ((score++)) || true
-    echo "$output" | grep -qi "data.*flow\|call.*chain\|execution.*path\|control.*flow" && ((score++)) || true
+    echo "$output" | grep -qi "data.*flow\|call.*chain\|execution.*path\|control.*flow\|read.*modify.*write\|returned.*then" && ((score++)) || true
 
     # Structured output (0-3): is the analysis organized?
-    echo "$output" | grep -qi "root.*cause\|underlying\|fundamental" && ((score++)) || true
-    echo "$output" | grep -qi "symptom\|observed\|reported\|visible" && ((score++)) || true
-    echo "$output" | grep -qi "scope\|affected\|impact\|related" && ((score++)) || true
+    echo "$output" | grep -qi "root.*cause\|underlying\|fundamental\|instead of\|rather than" && ((score++)) || true
+    echo "$output" | grep -qi "symptom\|observed\|reported\|visible\|crash\|wrong result\|exception" && ((score++)) || true
+    echo "$output" | grep -qi "scope\|affected\|impact\|related\|regress\|secondary\|other.*path\|another.*instance" && ((score++)) || true
 
     echo "$score"
 }
@@ -34,26 +49,36 @@ score_thoroughness() {
 # Did the response identify the correct root cause?
 score_root_cause() {
     local output="$1"
-    local expected_root_cause="$2"  # comma-separated keywords
+    local expected_root_cause="$2"
 
     local score=0
     local matched=0
     local total=0
+    local normalized_output
 
-    IFS=',' read -ra KEYWORDS <<< "$expected_root_cause"
-    for kw in "${KEYWORDS[@]}"; do
+    normalized_output=$(printf '%s\n' "$output" | tr '[:upper:]' '[:lower:]')
+
+    while IFS= read -r kw; do
+        [[ -z "$kw" ]] && continue
         ((total++))
-        if echo "$output" | grep -qi "$kw"; then
+        if echo "$normalized_output" | grep -Fqi "$kw"; then
             ((matched++))
         fi
-    done
+    done < <(extract_reference_terms "$expected_root_cause")
 
-    # Scale: 0-1 match = 1, 2-3 = 2, 4-5 = 3, 6-7 = 4, 8+ = 5
-    if [[ $matched -ge 8 ]]; then score=5
-    elif [[ $matched -ge 6 ]]; then score=4
-    elif [[ $matched -ge 4 ]]; then score=3
-    elif [[ $matched -ge 2 ]]; then score=2
-    elif [[ $matched -ge 1 ]]; then score=1
+    if [[ $total -eq 0 ]]; then
+        echo 0
+        return
+    fi
+
+    local ratio=$((matched * 100 / total))
+
+    # Scale against expected-term coverage so each scenario can reach 5/5.
+    if [[ $ratio -ge 85 ]]; then score=5
+    elif [[ $ratio -ge 65 ]]; then score=4
+    elif [[ $ratio -ge 45 ]]; then score=3
+    elif [[ $ratio -ge 25 ]]; then score=2
+    elif [[ $ratio -ge 10 ]]; then score=1
     fi
 
     echo "$score"
@@ -94,7 +119,7 @@ compare_ab() {
     local scenario_id="$1"
     local pulz_output="$2"
     local baseline_output="$3"
-    local expected_root_cause_kw="$4"
+    local expected_root_cause_text="$4"
     local has_secondary="$5"
 
     echo ""
@@ -104,8 +129,8 @@ compare_ab() {
     local pulz_thorough=$(score_thoroughness "$pulz_output")
     local base_thorough=$(score_thoroughness "$baseline_output")
 
-    local pulz_root=$(score_root_cause "$pulz_output" "$expected_root_cause_kw")
-    local base_root=$(score_root_cause "$baseline_output" "$expected_root_cause_kw")
+    local pulz_root=$(score_root_cause "$pulz_output" "$expected_root_cause_text")
+    local base_root=$(score_root_cause "$baseline_output" "$expected_root_cause_text")
 
     local pulz_fix=$(score_fix_completeness "$pulz_output" "$has_secondary")
     local base_fix=$(score_fix_completeness "$baseline_output" "$has_secondary")

@@ -7,7 +7,7 @@ Validates that the Pulz skill (TCM-inspired debugging) improves Claude's debuggi
 | Layer | What it tests | Script |
 |-------|---------------|--------|
 | A. Trigger Accuracy | Skill activates on correct prompts, stays silent otherwise | `run-trigger-test.sh` |
-| B. Diagnostic Quality | With-skill produces structured, thorough analysis vs baseline | `run-quality-test.sh` |
+| B. Diagnostic Quality | With-skill produces concrete diagnostic evidence, not just template output | `run-quality-test.sh` |
 | C. Fix Correctness | With-skill finds and fixes bugs more accurately | `run-fix-test.sh` |
 
 ## Methodology

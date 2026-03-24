@@ -25,12 +25,8 @@ for scenario_dir in "$EVALS_DIR"/bug-scenarios/*/; do
     scenario_name=$(jq -r '.name' "$scenario_file")
     fixture=$(jq -r '.fixture' "$scenario_file")
     prompt=$(jq -r '.prompt' "$scenario_file")
-    expected_fix_kw=$(jq -r '.expected_fix_keywords | join(",")' "$scenario_file")
-    expected_scope=$(jq -r '.expected_scope | join(",")' "$scenario_file")
+    expected_root_cause=$(jq -r '.expected_root_cause' "$scenario_file")
     has_secondary=$(jq -r '.has_secondary_bug' "$scenario_file")
-
-    # Combine keywords for root cause scoring
-    root_cause_kw="$expected_fix_kw,$expected_scope"
 
     echo -e "${YELLOW}Scenario: $scenario_name${NC}"
 
@@ -47,7 +43,7 @@ for scenario_dir in "$EVALS_DIR"/bug-scenarios/*/; do
     save_result "$scenario_id" "baseline_fix" "$base_text" > /dev/null
 
     # --- Compare ---
-    result=$(compare_ab "$scenario_id" "$pulz_text" "$base_text" "$root_cause_kw" "$has_secondary")
+    result=$(compare_ab "$scenario_id" "$pulz_text" "$base_text" "$expected_root_cause" "$has_secondary")
 
     # Parse last line for scores
     scores_line=$(echo "$result" | tail -1)
@@ -55,7 +51,7 @@ for scenario_dir in "$EVALS_DIR"/bug-scenarios/*/; do
     base_score=$(echo "$scores_line" | cut -d: -f2)
 
     # Print everything except the raw score line
-    echo "$result" | head -n -1
+    printf '%s\n' "$result" | sed '$d'
 
     PULZ_TOTAL=$((PULZ_TOTAL + pulz_score))
     BASE_TOTAL=$((BASE_TOTAL + base_score))

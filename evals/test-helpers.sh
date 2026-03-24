@@ -19,25 +19,84 @@ PROJECT_DIR="$(dirname "$EVALS_DIR")"
 RESULTS_DIR="$EVALS_DIR/results"
 mkdir -p "$RESULTS_DIR"
 
-# Run Claude with Pulz skill loaded
-run_with_pulz() {
-    local prompt="$1"
-    local fixture="${2:-}"
-    local timeout="${3:-120}"
+# Run a command with a timeout across GNU/Linux and macOS environments.
+run_with_timeout() {
+    local timeout_seconds="$1"
+    shift
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$timeout_seconds" "$@"
+        return $?
+    fi
+
+    if command -v gtimeout >/dev/null 2>&1; then
+        gtimeout "$timeout_seconds" "$@"
+        return $?
+    fi
+
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$timeout_seconds" "$@" <<'PY'
+import subprocess
+import sys
+
+timeout_seconds = int(float(sys.argv[1]))
+command = sys.argv[2:]
+
+try:
+    completed = subprocess.run(command, timeout=timeout_seconds)
+    raise SystemExit(completed.returncode)
+except subprocess.TimeoutExpired:
+    print(
+        f"Timed out after {timeout_seconds}s: {' '.join(command[:4])}",
+        file=sys.stderr,
+    )
+    raise SystemExit(124)
+except FileNotFoundError as exc:
+    print(f"Command not found: {exc.filename}", file=sys.stderr)
+    raise SystemExit(127)
+PY
+        return $?
+    fi
+
+    echo "Error: need one of timeout, gtimeout, or python3 to enforce eval timeouts." >&2
+    return 127
+}
+
+# Shared Claude runner that fails loudly on infrastructure errors.
+run_claude() {
+    local skill_dir="$1"
+    local prompt="$2"
+    local fixture="${3:-}"
+    local timeout_seconds="${4:-120}"
 
     local cmd_args=(
         claude
-        --skill-dir "$PROJECT_DIR/pulz"
         --dangerously-skip-permissions
         --output-format stream-json
         --max-turns 3
     )
 
+    if [[ -n "$skill_dir" ]]; then
+        cmd_args=(claude --skill-dir "$skill_dir" "${cmd_args[@]:1}")
+    fi
+
     if [[ -n "$fixture" ]]; then
+        if [[ ! -f "$EVALS_DIR/$fixture" ]]; then
+            echo "Error: fixture not found: $EVALS_DIR/$fixture" >&2
+            return 1
+        fi
         cmd_args+=(--file "$EVALS_DIR/$fixture")
     fi
 
-    timeout "$timeout" "${cmd_args[@]}" "$prompt" 2>/dev/null || true
+    run_with_timeout "$timeout_seconds" "${cmd_args[@]}" "$prompt"
+}
+
+# Run Claude with Pulz skill loaded
+run_with_pulz() {
+    local prompt="$1"
+    local fixture="${2:-}"
+    local timeout="${3:-120}"
+    run_claude "$PROJECT_DIR/pulz" "$prompt" "$fixture" "$timeout"
 }
 
 # Run Claude WITHOUT Pulz skill (baseline)
@@ -45,19 +104,7 @@ run_without_pulz() {
     local prompt="$1"
     local fixture="${2:-}"
     local timeout="${3:-120}"
-
-    local cmd_args=(
-        claude
-        --dangerously-skip-permissions
-        --output-format stream-json
-        --max-turns 3
-    )
-
-    if [[ -n "$fixture" ]]; then
-        cmd_args+=(--file "$EVALS_DIR/$fixture")
-    fi
-
-    timeout "$timeout" "${cmd_args[@]}" "$prompt" 2>/dev/null || true
+    run_claude "" "$prompt" "$fixture" "$timeout"
 }
 
 # Extract text content from stream-json output
@@ -146,14 +193,12 @@ score_diagnostic_structure() {
     local output="$1"
     local score=0
 
-    # Check for four-phase structure
-    echo "$output" | grep -qi "observation\|wang.zhen\|static.*analy" && ((score++)) || true
-    echo "$output" | grep -qi "listening\|wen.zhen\|log\|runtime\|error.*message\|stack.*trace" && ((score++)) || true
-    echo "$output" | grep -qi "inquiry\|context\|environment\|when.*appear\|reproduce" && ((score++)) || true
-    echo "$output" | grep -qi "palpation\|qie.zhen\|test\|reproduc\|trace.*data\|variable.*state" && ((score++)) || true
-
-    # Check for structured diagnosis
-    echo "$output" | grep -qi "root.*cause\|underlying\|ben\|biao\|symptom.*vs\|bug.*profile" && ((score++)) || true
+    # Check for meaningful diagnostic evidence instead of Pulz-specific labels.
+    echo "$output" | grep -qi "line [0-9]\|function\|method\|class\|code.*path\|control.*flow\|branch\|index\|null\|undefined\|type\|resource\|lock\|函数\|方法\|类\|代码路径\|控制流\|索引" && ((score++)) || true
+    echo "$output" | grep -qi "error\|exception\|stack.*trace\|runtime\|crash\|wrong result\|expected.*actual\|actual.*expected\|intermittent\|错误\|异常\|堆栈\|运行时\|崩溃\|预期\|实际" && ((score++)) || true
+    echo "$output" | grep -qi "reproduc\|input\|condition\|environment\|recent.*change\|thread\|batch\|context\|复现\|输入\|条件\|环境\|上下文\|线程\|批次" && ((score++)) || true
+    echo "$output" | grep -qi "test\|assert\|verify\|fail.*before\|pass.*after\|trace\|confirm\|测试\|断言\|验证\|修复前\|修复后\|跟踪\|确认" && ((score++)) || true
+    echo "$output" | grep -qi "root.*cause\|because\|due to\|caused by\|instead of\|rather than\|scope\|affected\|impact\|secondary\|根因\|因为\|导致\|而不是\|范围\|影响\|次要" && ((score++)) || true
 
     echo "$score"
 }

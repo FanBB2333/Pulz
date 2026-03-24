@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Layer B: Diagnostic Quality Test
-# A/B comparison: Does Pulz produce more structured, thorough diagnoses than baseline?
-# Tests that with-Pulz responses contain four-phase diagnostic structure.
+# Checks that with-Pulz responses include concrete diagnostic evidence rather than
+# only templated phase headings.
 
 set -euo pipefail
 
@@ -31,19 +31,19 @@ for scenario_dir in "$EVALS_DIR"/bug-scenarios/*/; do
     pulz_text=$(extract_text "$pulz_output")
     save_result "$scenario_id" "pulz_quality" "$pulz_text" > /dev/null
 
-    # Check four-phase structure presence
-    echo "  Checking diagnostic structure:"
-    assert_contains "Phase 1: Observation" "$pulz_text" "observation\|wang.zhen\|static.*analy\|code.*struct\|complex" || true
-    assert_contains "Phase 2: Listening" "$pulz_text" "listening\|wen.zhen\|error.*signal\|log\|stack.*trace\|runtime" || true
-    assert_contains "Phase 3: Inquiry" "$pulz_text" "inquiry\|context\|environment\|when.*appear\|condition\|reproduce" || true
-    assert_contains "Phase 4: Palpation" "$pulz_text" "palpation\|qie.zhen\|test\|reproduc\|trace\|data.*flow\|variable.*state" || true
+    # Check for evidence across the main diagnostic dimensions.
+    echo "  Checking diagnostic evidence:"
+    assert_contains "Static code reasoning" "$pulz_text" "line [0-9]\|function\|method\|class\|code.*path\|control.*flow\|branch\|index\|null\|undefined\|type\|resource\|lock" || true
+    assert_contains "Runtime symptom analysis" "$pulz_text" "error\|exception\|stack.*trace\|runtime\|crash\|wrong result\|expected.*actual\|actual.*expected\|intermittent" || true
+    assert_contains "Reproduction context" "$pulz_text" "reproduc\|input\|condition\|environment\|recent.*change\|thread\|batch\|context" || true
+    assert_contains "Verification plan" "$pulz_text" "test\|assert\|verify\|fail.*before\|pass.*after\|trace\|confirm" || true
 
     # Check structured diagnosis output
-    assert_contains "Bug Profile" "$pulz_text" "root.*cause\|bug.*profile\|diagnosis\|bian.zheng" || true
-    assert_contains "Treatment Plan" "$pulz_text" "fix\|treatment\|repair\|patch\|solution" || true
+    assert_contains "Root-cause synthesis" "$pulz_text" "root.*cause\|because\|due to\|caused by\|instead of\|rather than" || true
+    assert_contains "Concrete fix plan" "$pulz_text" "fix\|repair\|patch\|solution\|change\|guard\|lock\|parse" || true
 
     # Check for structured report format (table, sections, etc.)
-    local struct_score=$(score_diagnostic_structure "$pulz_text")
+    struct_score=$(score_diagnostic_structure "$pulz_text")
     echo -e "  Diagnostic structure score: ${struct_score}/5"
     if [[ $struct_score -ge 3 ]]; then
         echo -e "  ${GREEN}PASS${NC}: Adequate diagnostic structure (${struct_score}/5)"

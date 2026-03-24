@@ -48,18 +48,18 @@ External benchmarks (e.g., SWE-bench) test general coding ability across many ta
 
 **Method**:
 - Run all 5 bug scenarios with Pulz loaded.
-- Check each output for the four-phase diagnostic structure (Observation, Listening, Inquiry, Palpation).
-- Score the diagnostic structure on a 0-5 scale.
+- Check each output for concrete diagnostic evidence: code-path reasoning, runtime signals, reproduction context, verification steps, and root-cause synthesis.
+- Score the diagnostic evidence on a 0-5 scale.
 
 **Scoring Rubric** (per scenario, 0-5):
 
 | Points | Criteria |
 |--------|----------|
-| +1 | Contains Observation phase (static analysis findings) |
-| +1 | Contains Listening phase (runtime/error signal analysis) |
-| +1 | Contains Inquiry phase (context gathering) |
-| +1 | Contains Palpation phase (dynamic verification/test) |
-| +1 | Contains structured diagnosis (Bug Profile / root cause vs symptom distinction) |
+| +1 | Includes static reasoning tied to the buggy code path |
+| +1 | Explains the observed runtime symptom or failure signal |
+| +1 | Mentions reproduction conditions, input, or missing context |
+| +1 | Proposes verification such as a repro test or dynamic trace |
+| +1 | Synthesizes a root cause instead of only restating the symptom |
 
 **Target**: Average score >= 3/5 across all scenarios
 
@@ -88,7 +88,7 @@ How systematically does the response analyze the problem before proposing a fix?
 | Structured output | 0-3 | Distinguishes root cause from symptom, identifies scope and impact |
 
 #### Dimension 2: Root Cause Accuracy (0-5)
-Does the response identify the correct root cause? Scored by keyword matching against the expected root cause description.
+Does the response identify the correct root cause? Scored against normalized term coverage from `expected_root_cause`, so each scenario is scaled relative to its own reference explanation.
 
 #### Dimension 3: Fix Completeness (0-5)
 | Points | Criteria |
