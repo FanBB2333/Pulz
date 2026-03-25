@@ -1,0 +1,12 @@
+{
+  "id": "08-deadlock-transfer",
+  "name": "Opposing transfers deadlock under load",
+  "language": "python",
+  "fixture": "fixtures/deadlock_transfer.py",
+  "prompt": "Two opposite transfers in deadlock_transfer.py sometimes hang forever under load. CPU stays low, no exception is raised, and both threads remain blocked. What's the actual bug?",
+  "bug_type": "deadlock",
+  "expected_root_cause": "transfer() acquires account locks in caller order, so opposing transfers can take the two locks in opposite order and deadlock",
+  "expected_fix_keywords": ["consistent order", "sort", "account_id", "lock ordering", "deadlock", "ordered locks", "first", "second"],
+  "expected_scope": ["transfer", "Account", "TransferService"],
+  "has_secondary_bug": false
+}

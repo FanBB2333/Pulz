@@ -1,0 +1,13 @@
+{
+  "id": "07-tenant-cache-leak",
+  "name": "Cross-tenant feature flag cache leak",
+  "language": "python",
+  "fixture": "fixtures/tenant_cache_leak.py",
+  "prompt": "In tenant_cache_leak.py, tenant beta sometimes receives tenant alpha's feature flags after the cache is warmed for the same user id. It only happens for tenants sharing user id 42. Diagnose the root cause.",
+  "bug_type": "cache_key_collision",
+  "expected_root_cause": "The cache key uses only user_id and omits tenant_id, so multi-tenant entries collide and one tenant can read another tenant's cached flags",
+  "expected_fix_keywords": ["tenant_id", "cache key", "tuple", "namespace", "collision", "tenant", "_cache", "invalidate"],
+  "expected_scope": ["get_flags", "update_flags", "_cache"],
+  "has_secondary_bug": true,
+  "secondary_bug_description": "update_flags uses the same incomplete cache key shape when invalidating entries"
+}

@@ -17,13 +17,16 @@ class UserService:
         self.repo = repo
 
     def get_user_display_name(self, user_id):
-        # BUG: No null check on find_by_id result
         user = self.repo.find_by_id(user_id)
-        return user["name"].upper()  # Crashes when user is None
+        if user is None:
+            return None
+        return user["name"].upper()
 
     def get_user_email(self, user_id):
         user = self.repo.find_by_id(user_id)
-        return user["email"]  # Same bug pattern
+        if user is None:
+            return None
+        return user["email"]
 
 
 if __name__ == "__main__":

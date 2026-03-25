@@ -4,12 +4,15 @@ Date: 2026-03-25
 
 ## Goal
 
-Check a few simple bug-fix case studies to see what changes when Claude is run:
+Measure whether adding `Pulz` actually improves bug-fix success rate under the
+current local Claude Code configuration.
 
-- without Pulz guidance
-- with Pulz guidance available to Claude
+This document now contains two layers:
 
-This is a lightweight case study, not a formal benchmark.
+- a current **execution-based** measurement on 8 bug scenarios using the local
+  `glm-4.7` configuration
+- the earlier **qualitative** notes from a few simple examples, preserved for
+  output-style comparison
 
 ## Setup
 
@@ -27,7 +30,19 @@ claude -p \
 
 In practice, this can be used to expose an external skill workspace to Claude so the session can discover and load the skills under that directory.
 
-For the already captured outputs in this document, the treatment side used a compatibility approximation by injecting `pulz/SKILL.md` through `--append-system-prompt`. For future reruns of this case study, the preferred native treatment path is:
+For the quantified run in this document, I did **not** use `--add-dir` as the
+formal treatment path. A smoke test on the current `glm-4.7` setup timed out
+for more than 180 seconds on a single minimal case when `--add-dir
+/Users/l1ght/repos/Pulz/pulz` was enabled, which would have mixed "skill
+effectiveness" with "native skill mounting stability".
+
+To keep the underlying model/config identical while making Pulz activation
+deterministic, the measured treatment path injected `pulz/SKILL.md` via
+`--append-system-prompt`. The current local Claude Code configuration still came
+from the same local config files; only the presence or absence of Pulz guidance
+changed.
+
+The preferred native treatment path for future reruns is still:
 
 ```bash
 claude -p \
@@ -39,24 +54,106 @@ claude -p \
   "$PROMPT"
 ```
 
-The baseline side used the same command without Pulz-specific context.
+The execution-based run itself was produced by:
 
-All prompts were intentionally simple: "Help me debug and fix this bug", followed by the symptom and a small standalone code snippet.
+```bash
+python3 evals/run_case_study.py
+```
+
+That runner asks Claude to return the full corrected file for each fixture, then
+executes a per-scenario validator. This is closer to a real "can it actually fix
+the bug?" measurement than a template or keyword score.
 
 ## Versions
 
 - `Pulz` skill version: `0.1.0` from [pulz/SKILL.md](/Users/l1ght/repos/Pulz/pulz/SKILL.md)
 - `Claude Code` version used for these runs: `2.1.74`
+- configured model in `~/.claude/settings.json`: `glm-4.7`
 
 ## Cases
+
+Simple cases:
 
 1. `null_deref`: Python null dereference in `UserService`
 2. `off_by_one`: JavaScript pagination offset bug
 3. `resource_leak`: Python connection pool leak
+4. `race_condition`: Python unsynchronized counter increment
+5. `type_coercion`: JavaScript numeric/string coercion bug
 
-## Heuristic Summary
+Harder cases:
 
-Scores below are from the current local eval heuristics. They are useful as a rough directional signal, but should not be treated as ground truth.
+6. `checkpoint_ordering`: checkpoint committed before handler success
+7. `tenant_cache_leak`: multi-tenant cache key missing tenant scope
+8. `deadlock_transfer`: opposing transfers deadlock on inconsistent lock order
+
+## Quantitative Result (`glm-4.7`)
+
+Primary result file:
+[evals/results/case_study_glm47_20260325_143804.json](/Users/l1ght/repos/Pulz/evals/results/case_study_glm47_20260325_143804.json)
+
+| Slice | Baseline | Pulz | Delta |
+|------|---------:|-----:|------:|
+| Overall (8 cases) | 7/8 = 87.5% | 7/8 = 87.5% | 0.0 pp |
+| Simple cases (01-05) | 4/5 = 80.0% | 4/5 = 80.0% | 0.0 pp |
+| Hard cases (06-08) | 3/3 = 100.0% | 3/3 = 100.0% | 0.0 pp |
+
+Per-case outcome from the measured run:
+
+| Case | Baseline | Pulz | Note |
+|------|---------:|-----:|------|
+| `01-null-deref` | pass | pass | both applied minimal `None` guard fix |
+| `02-off_by_one` | pass | fail | Pulz-side failure was a transient structured-output miss |
+| `03-resource_leak` | fail | pass | baseline-side failure was a transient structured-output miss |
+| `04-race_condition` | pass | pass | both synchronized counter updates correctly |
+| `05-type_coercion` | pass | pass | both fixed numeric conversion path |
+| `06-checkpoint_ordering` | pass | pass | both found the commit-before-apply ordering bug |
+| `07-tenant_cache_leak` | pass | pass | both fixed tenant scoping in cache key/invalidation |
+| `08-deadlock_transfer` | pass | pass | both enforced stable lock ordering |
+
+### Interpretation
+
+Under the current `glm-4.7` Claude Code configuration, adding Pulz did **not**
+increase the execution-based fix rate on this 8-case suite. The measured
+headline number is flat: `87.5%` vs `87.5%`.
+
+The two misses in the full run were not validator failures on the repaired code;
+they were transient structured-output failures, one on each side. I spot-reran
+those two exact prompts afterward, and both succeeded on rerun. That means the
+directional conclusion is still the same: in this setup, Pulz did not show a
+clear repair-rate advantage, and the observed noise was not biased in Pulz's
+favor or against it.
+
+### What Changed Anyway
+
+Even though the fix rate stayed flat, Pulz still changed some responses at the
+text level. Representative excerpts from the measured run:
+
+Baseline on `checkpoint_ordering`:
+
+```text
+The bug is that the checkpoint is saved before the handler executes. When
+evt-2 fails, its offset (2) is already committed. On retry, the condition
+`event["offset"] <= last_offset` causes `evt-2` to be skipped entirely.
+```
+
+Pulz on `checkpoint_ordering`:
+
+```text
+**Root Cause:** The checkpoint offset is saved before `handler.apply()`
+succeeds. When processing evt-2, `checkpoint.save(offset=2)` executes first,
+then `handler.apply()` raises RuntimeError. On retry, `checkpoint.load()`
+returns 2, so the retry loop skips evt-2.
+```
+
+The difference is real but modest: Pulz tends to make the explanation slightly
+more explicit and stepwise, but in this `glm-4.7` configuration that did not
+translate into a higher end-to-end repair rate.
+
+## Earlier Qualitative Notes
+
+The sections below are older qualitative notes from 3 simpler cases. They are
+kept here because they preserve more of the original Claude output style, but
+they should not be confused with the execution-based fix-rate measurement above.
 
 | Case | Mode | Words | Diagnostic | Thoroughness | Root Cause | Fix Completeness | Total |
 |------|------|------:|-----------:|-------------:|-----------:|-----------------:|------:|
@@ -185,13 +282,18 @@ One concrete optimization direction for Pulz is to introduce an explicit **repai
 
 ## Bottom Line
 
-For simple case studies, loading Pulz does make a visible difference, but the difference is mostly in **workflow quality**, not always in **final patch correctness**.
+For the current `glm-4.7` setup, the measured answer is straightforward:
+loading Pulz changed some explanation style, but it did **not** produce a higher
+execution-based bug-fix rate on this case-study suite.
 
-The pattern from these three runs is:
+The current quantitative result is:
 
-- baseline: shorter, faster, often already correct
-- Pulz: more structured, more test-oriented, more likely to mention scope and regression risk
-- tradeoff: Pulz can over-analyze and occasionally recommend a bigger change than the bug really needs
+- baseline: `7/8`
+- Pulz: `7/8`
+- hard cases: `3/3` on both sides
 
-So if the goal is "make the fix process more disciplined and auditable", Pulz helps.
-If the goal is "get the shortest correct patch for a very small bug", baseline Claude may already be sufficient.
+So, with this model/config pair, Pulz currently looks more like a
+**process-shaping skill** than a **repair-rate boosting skill**. If the project
+goal is to improve final fix rate, the next optimization work should focus on
+when to stay minimal, when to escalate, and how to avoid paying verbosity cost
+without gaining extra correctness.

@@ -1,0 +1,12 @@
+{
+  "id": "06-checkpoint-ordering",
+  "name": "Checkpoint committed before handler success",
+  "language": "python",
+  "fixture": "fixtures/checkpoint_ordering.py",
+  "prompt": "After a handler crash in checkpoint_ordering.py, the failing event is skipped on retry and the system silently loses that update. Why is the retry flow dropping the failed event?",
+  "bug_type": "checkpoint_ordering",
+  "expected_root_cause": "The consumer saves the checkpoint offset before handler.apply succeeds, so a failed event is marked as processed and skipped on retry",
+  "expected_fix_keywords": ["checkpoint", "offset", "after apply", "after success", "save after", "retry", "skip", "ack after"],
+  "expected_scope": ["process_batch", "OrderEventConsumer", "CheckpointStore"],
+  "has_secondary_bug": false
+}

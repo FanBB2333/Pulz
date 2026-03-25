@@ -47,7 +47,7 @@ External benchmarks (e.g., SWE-bench) test general coding ability across many ta
 **Question**: When triggered, does Pulz produce a structured, thorough diagnosis?
 
 **Method**:
-- Run all 5 bug scenarios with Pulz loaded.
+- Run all 8 bug scenarios with Pulz loaded.
 - Check each output for concrete diagnostic evidence: code-path reasoning, runtime signals, reproduction context, verification steps, and root-cause synthesis.
 - Score the diagnostic evidence on a 0-5 scale.
 
@@ -72,7 +72,7 @@ External benchmarks (e.g., SWE-bench) test general coding ability across many ta
 **Question**: Does Pulz help Claude find and fix bugs more accurately than baseline?
 
 **Method**:
-- Run each of the 5 bug scenarios twice: once with Pulz (treatment), once without (control).
+- Run each of the 8 bug scenarios twice: once with Pulz (treatment), once without (control).
 - Score both outputs on three dimensions.
 - Aggregate and compare.
 
@@ -99,7 +99,7 @@ Does the response identify the correct root cause? Scored against normalized ter
 | +1 | Considers regression / side effects |
 | +1 | Finds secondary bug (if scenario has one; auto-awarded if not) |
 
-**Aggregate**: Each scenario yields a score out of 20 for both Pulz and baseline. Final comparison is the sum across all 5 scenarios (out of 100).
+**Aggregate**: Each scenario yields a score out of 20 for both Pulz and baseline. Final comparison is the sum across all 8 scenarios (out of 160).
 
 **Success Criteria**: Pulz aggregate score > Baseline aggregate score
 
@@ -116,8 +116,11 @@ Does the response identify the correct root cause? Scored against normalized ter
 | 03 | Resource leak | Python | Trace connection lifecycle through pool acquire/release |
 | 04 | Race condition | Python | Identify non-atomic read-modify-write in concurrent code |
 | 05 | Type coercion | JavaScript | Trace string-typed input through arithmetic operations |
+| 06 | Checkpoint ordering | Python | Notice the retry/data-loss bug is caused by committing offsets before successful handling |
+| 07 | Tenant cache leak | Python | Connect a cross-tenant symptom to an incomplete cache key and invalidation shape |
+| 08 | Deadlock | Python | Diagnose intermittent hangs caused by inconsistent lock acquisition order |
 
-These cover a range of bug categories, languages, and complexity levels. Scenarios 01 and 05 include secondary bugs to test diagnostic thoroughness.
+These cover a range of bug categories, languages, and complexity levels, including harder cases where the symptom and the root cause are separated across retry flow, caching boundaries, and concurrency behavior. Scenarios 01, 05, and 07 include secondary bug patterns to test diagnostic thoroughness.
 
 ---
 
@@ -142,8 +145,8 @@ cd evals/
 
 # Individual layers
 ./run-trigger-test.sh    # ~15 min (30 Claude calls)
-./run-quality-test.sh    # ~10 min (5 Claude calls)
-./run-fix-test.sh        # ~20 min (10 Claude calls)
+./run-quality-test.sh    # ~15 min (8 Claude calls)
+./run-fix-test.sh        # ~30 min (16 Claude calls)
 ```
 
 Results are saved to `evals/results/` with timestamps for historical comparison.
@@ -152,7 +155,7 @@ Results are saved to `evals/results/` with timestamps for historical comparison.
 
 ## Statistical Considerations
 
-- **Sample size**: 5 bug scenarios is small. Results should be interpreted as directional evidence, not statistically significant proof. To strengthen claims, expand to 15-20 scenarios.
+- **Sample size**: 8 bug scenarios is still small. Results should be interpreted as directional evidence, not statistically significant proof. To strengthen claims, expand to 15-20 scenarios.
 - **Variance**: LLM outputs are non-deterministic. For robust results, run each scenario 3-5 times and report mean +/- std.
 - **Keyword matching limitations**: Automated scoring via keyword matching is approximate. For publication-quality results, supplement with human evaluation or LLM-as-judge scoring.
 

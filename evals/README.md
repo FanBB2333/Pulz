@@ -1,6 +1,6 @@
 # Pulz Evaluation Suite
 
-Validates that the Pulz skill (TCM-inspired debugging) improves Claude's debugging capabilities compared to baseline (no skill loaded).
+Validates that the Pulz skill (TCM-inspired debugging) improves Claude's debugging capabilities compared to baseline (no skill loaded), including both straightforward bugs and harder root-cause/debugging scenarios.
 
 ## Evaluation Dimensions
 
@@ -47,6 +47,9 @@ evals/
     03-resource-leak/
     04-race-condition/
     05-type-coercion/
+    06-checkpoint-ordering/
+    07-tenant-cache-leak/
+    08-deadlock-transfer/
   fixtures/                # Buggy source files used by scenarios
   test-helpers.sh          # Shared assertion functions
   scoring.sh               # Output scoring functions
