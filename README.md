@@ -1,15 +1,32 @@
+<div align="center">
+
 # Pulz
 
-**Feel the pulse of your code.**
+> *"Feel the pulse of your code."*
 
-Pulz is an [Agent Skill](https://agentskills.io) that guides LLM / Coding
-Agents to diagnose and fix code bugs using Traditional Chinese Medicine (TCM)
-diagnostic methodology.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://python.org)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet)](https://claude.ai/code)
+[![AgentSkills](https://img.shields.io/badge/AgentSkills-Standard-green)](https://agentskills.io)
 
-Instead of jumping to a fix, Pulz enforces a structured four-phase examination
--- Observation, Listening, Inquiry, Palpation -- to fully understand a bug
-before prescribing a minimal-invasive repair. The core philosophy: **treat the
-root cause, not the symptom**.
+<br>
+
+Bug reports that say "it doesn't work"?<br>
+Stack traces longer than the code itself?<br>
+Hotfixes that create two new bugs for every one they close?<br>
+AI agents that jump to a patch without understanding the disease?<br>
+
+**Stop treating symptoms. Diagnose the root cause.**
+
+Pulz is an [Agent Skill](https://agentskills.io) that guides LLM / Coding Agents to diagnose and fix bugs<br>
+using Traditional Chinese Medicine (TCM) diagnostic methodology — a structured four-phase examination<br>
+before prescribing a minimal-invasive repair.
+
+[How It Works](#how-it-works) · [Quick Start](#quick-start) · [Design Reference](#design-reference)
+
+</div>
+
+---
 
 ## How It Works
 
@@ -65,6 +82,10 @@ See [spec.md](spec.md) for the complete design specification, including
 planned features beyond bug fixing (visualization, CI/CD integration,
 adaptive learning, etc.).
 
-## License
+---
 
-[MIT](LICENSE)
+<div align="center">
+
+MIT License © [L1ght](https://github.com/FanBB2333)
+
+</div>
